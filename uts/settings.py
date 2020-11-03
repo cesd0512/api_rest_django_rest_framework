@@ -122,7 +122,7 @@ REST_FRAMEWORK = {
 
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ORIGIN_WHITELIST = [
-    "http://192.168.1.5",
+    "http://localhost:8080",
 ]
 
 # Database

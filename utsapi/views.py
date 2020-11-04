@@ -14,7 +14,8 @@ from django.http import FileResponse
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework import authentication, permissions
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, login, logout
+from rest_framework.authtoken.models import Token
 from django.http import HttpResponse, Http404, HttpResponseServerError
 
 
@@ -67,14 +68,21 @@ class CreateUser(APIView):
         email = request.data.get('email', None)
         if not password or not name or not fname or not lname or not email:
             return Response({'status': 'error', 'message': 'Empty arguments!'})
-
-        # obj = User(username=name, password=password, first_name=fname, last_name=lname, email=email)
         try:
             user = User.objects.create_user(username=name, password=password, first_name=fname, last_name=lname, email=email)
             user.save()
         except Exception as inst:
             return Response({'detail': inst.args})
         return Response({'status': 'ok', 'message': 'User created successful'})
+
+
+
+class LogoutUser(APIView):
+    permission_classes = (IsAuthenticated,)  
+
+    def post(self, request, format=None):
+        logout(request)
+        return Response({'status': 'ok', 'message': 'Logout successful!'})
 
 
 class AuthenticateUser(APIView):
@@ -87,9 +95,19 @@ class AuthenticateUser(APIView):
         password = request.data.get('password', None)
         user = authenticate(username=name, password=password)
         if user is not None:
-            return Response({'valid': True})
+            login(request, user)
+            token, _ = Token.objects.get_or_create(user=user)
+            user_res = {
+                'username': user.username,
+                'email': user.email,
+                'last_login': user.last_login,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'token': token.key,
+            }
+            return Response({'valid': True, 'user': user_res})
         else:
-            return Response({'valid': False})
+            return Response({'valid': False, 'user': {}})
 
 
 class ProjectViewSet(viewsets.ModelViewSet):

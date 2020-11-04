@@ -16,5 +16,6 @@ urlpatterns = [
     path('account/authentication/', views.AuthenticateUser.as_view()),
     path('account/change-password/', views.ChangePassword.as_view()),
     path('account/registration/', views.CreateUser.as_view()),
+    path('account/logout/', views.LogoutUser.as_view()),
     # path('download/<int:pk>/', views.download_file, name='download_file'),
 ]

@@ -2,8 +2,11 @@ from django.db import models
 
 
 class Project(models.Model):
-    name = models.CharField(max_length=100, null=True)
+    name = models.CharField(max_length=100, null=False)
+    description = models.CharField(max_length=200, null=True)
     owner = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     # dir = models.CharField()
 
     def __str__(self):
@@ -17,6 +20,8 @@ class File(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, null=False)
     favorite = models.BooleanField(default=False)
     owner = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     # dir = models.CharField()
 
     def __str__(self):

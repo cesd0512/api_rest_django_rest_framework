@@ -17,6 +17,8 @@ from rest_framework import authentication, permissions
 from django.contrib.auth import authenticate, login, logout
 from rest_framework.authtoken.models import Token
 from django.http import HttpResponse, Http404, HttpResponseServerError
+from .send_email import send_email
+from django.urls import reverse_lazy
 
 
 class CurrentUser(APIView):
@@ -35,6 +37,34 @@ class CurrentUser(APIView):
             'last_name': user.last_name
             }
         return Response(user_res)
+
+
+class RecoveryPassword(APIView):
+
+    def post(self, request, format=None):
+        """
+        Return state of change password.
+        """
+        email = request.data.get('email', None)
+        if email:
+            subject = "Reset password"
+            user_, = User.objects.filter(email=email)
+            base_url = 'http://localhost:8080/password-reset/?u=' + str(user_.id)
+            message = "Hello! \n To recover your password enter the following link: \n \n" + base_url
+            send_email(subject, message, email)
+            return Response({'status': 'ok', 'message': 'sended mail successful!'})
+
+        user_id = request.data.get('user', None)
+        n_pass = request.data.get('password', None)
+        if not n_pass:
+            return Response({'status': 'error', 'message': 'Empty arguments!'})
+        user, = User.objects.filter(id=int(user_id))
+        if user is not None:
+            user.set_password(n_pass)
+            user.save()
+            return Response({'status': 'ok', 'message': 'Password changed'})
+        else:
+            return Response({'status': 'error', 'message': 'Error user not found'})
 
 
 class ChangePassword(APIView):
@@ -118,14 +148,23 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def create(self, request):
         user = request.user
         name = request.data.get('name', None)
-        obj = Project(name=name, owner=user)
+        description = request.data.get('description', None)
+        obj = Project(name=name, owner=user, description=description)
         obj.save()
         return Response({
             'status': 'Project created', 
             'object': {
             'id': obj.id,
             'name': obj.name
-        }})
+            }
+        })
+    
+    def get_queryset(self):
+        queryset = Project.objects.all()
+        user = self.request.user.id
+        if user is not None:
+            queryset = Project.objects.filter(owner=user)
+        return queryset
 
 
 class FileViewSet(viewsets.ModelViewSet):

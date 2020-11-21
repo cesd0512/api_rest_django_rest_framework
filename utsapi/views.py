@@ -140,6 +140,30 @@ class AuthenticateUser(APIView):
             return Response({'valid': False, 'user': {}})
 
 
+class FilesFromProject(APIView):
+    permission_classes = (IsAuthenticated,) 
+
+    def post(self, request, format=None):
+        """
+        Return file list of project.
+        """
+        user_id = request.user.id
+        project_id = request.data.get('project', None)
+        files = File.objects.filter(owner=user_id, project=project_id)
+        list_obj = []
+        for f in files:
+            list_obj.append({
+                'name': f.name,
+                'extension': f.extension,
+                'route': f.route,
+                'favorite': f.favorite,
+                'created_date': f.created_at,
+                'project': f.project.name,
+            })
+
+        return Response(list_obj)
+
+
 class ProjectViewSet(viewsets.ModelViewSet):
     queryset = Project.objects.all().order_by('id')
     serializer_class = ProjectSerializer

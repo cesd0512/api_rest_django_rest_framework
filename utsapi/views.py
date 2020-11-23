@@ -153,7 +153,7 @@ class FilesFromProject(APIView):
         list_obj = []
         for f in files:
             list_obj.append({
-                'name': f.name,
+                'name': f.name.replace('.' + f.extension, ''),
                 'extension': f.extension,
                 'route': f.route,
                 'favorite': f.favorite,
@@ -207,10 +207,10 @@ class FileViewSet(viewsets.ModelViewSet):
         route_ = fs.url(name_)
         ext_ = name_.split('.')
         ext_ = ext_[1] if ext_ else None
-        project = request.data.get('project', None)
-        obj_project = Project.objects.get(id=project)
+        project_id = request.data.get('project', None)
+        project = Project.objects.get(id=project_id)
         user = request.user
-        obj = File(name=name_, extension=ext_, route=route_, project=obj_project, owner=user)
+        obj = File(name=name_, extension=ext_, route=route_, project=project, owner=user)
         obj.save()
         return Response({
             'status': 'File created', 

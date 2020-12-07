@@ -22,6 +22,7 @@ class File(models.Model):
     owner = models.ForeignKey('auth.User', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    media = models.FileField(upload_to='message/%Y/%m/%d/', null=True, blank=True)
     # dir = models.CharField()
 
     def __str__(self):

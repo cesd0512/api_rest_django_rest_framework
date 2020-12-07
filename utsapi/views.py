@@ -153,12 +153,14 @@ class FilesFromProject(APIView):
         list_obj = []
         for f in files:
             list_obj.append({
+                'id': f.id,
                 'name': f.name.replace('.' + f.extension, ''),
                 'extension': f.extension,
                 'route': f.route,
                 'favorite': f.favorite,
                 'created_date': f.created_at,
                 'project': f.project.name,
+                'url': f.media.url
             })
 
         return Response(list_obj)
@@ -202,15 +204,16 @@ class FileViewSet(viewsets.ModelViewSet):
             return self._download(id_download)
 
         uploaded_file = request.FILES['document']
-        fs = FileSystemStorage()
-        name_ = fs.save(uploaded_file.name, uploaded_file)
-        route_ = fs.url(name_)
+        # fs = FileSystemStorage()
+        # name_ = fs.save(uploaded_file.name, uploaded_file)
+        # route_ = fs.url(name_)
+        name_ = uploaded_file.name
         ext_ = name_.split('.')
-        ext_ = ext_[1] if ext_ else None
+        ext_ = ext_[-1] if ext_ else None
         project_id = request.data.get('project', None)
         project = Project.objects.get(id=project_id)
         user = request.user
-        obj = File(name=name_, extension=ext_, route=route_, project=project, owner=user)
+        obj = File(name=name_, extension=ext_, project=project, owner=user, media=uploaded_file)
         obj.save()
         return Response({
             'status': 'File created', 
@@ -221,11 +224,11 @@ class FileViewSet(viewsets.ModelViewSet):
         }})
     
     def retrieve(self, request, pk=None):
-        file_ = File.objects.filter(id=pk)
+        file_, = File.objects.filter(id=pk)
         if not file_:
             return Response({'message': 'File not exist'})
         user_id = self.request.user.id
-        if file_[0].owner.id != user_id:
+        if file_.owner.id != user_id:
             return Response({'status': 'Operation not permited'})
         return self._download(pk)
         # return super(FileViewSet, self).retrieve(request, pk)

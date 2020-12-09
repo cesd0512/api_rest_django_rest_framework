@@ -19,6 +19,8 @@ from rest_framework.authtoken.models import Token
 from django.http import HttpResponse, Http404, HttpResponseServerError
 from .send_email import send_email
 from django.urls import reverse_lazy
+from rest_framework.pagination import LimitOffsetPagination, PageNumberPagination
+from rest_framework.settings import api_settings
 
 
 class CurrentUser(APIView):
@@ -141,29 +143,71 @@ class AuthenticateUser(APIView):
 
 
 class FilesFromProject(APIView):
-    permission_classes = (IsAuthenticated,) 
+    permission_classes = (IsAuthenticated,)
+    serializer_class = FileSerializer
+    pagination_class = PageNumberPagination
 
     def post(self, request, format=None):
+        from rest_framework.request import Request
+        from rest_framework.test import APIRequestFactory
         """
         Return file list of project.
         """
         user_id = request.user.id
         project_id = request.data.get('project', None)
+        pagination = request.data.get('pagination', None)
         files = File.objects.filter(owner=user_id, project=project_id)
-        list_obj = []
-        for f in files:
-            list_obj.append({
-                'id': f.id,
-                'name': f.name.replace('.' + f.extension, ''),
-                'extension': f.extension,
-                'route': f.route,
-                'favorite': f.favorite,
-                'created_date': f.created_at,
-                'project': f.project.name,
-                'url': f.media.url
-            })
+        if pagination:
+            if not isinstance(pagination, int):
+                return Response({'message': 'Pagination parameter must be integer'})
+            self.pagination_class.page_size = int(pagination)
+            page = self.paginate_queryset(files)
+            if page is not None:
+                factory = APIRequestFactory()
+                request = factory.get('/')
+                serializer_context = {
+                    'request': Request(request),
+                }
+                serializer = self.serializer_class(page, many=True, context=serializer_context)
+                return self.get_paginated_response(serializer.data)
+        else:
+            list_obj = []
+            for f in files:
+                list_obj.append({
+                    'id': f.id,
+                    'name': f.name.replace('.' + f.extension, ''),
+                    'extension': f.extension,
+                    'route': f.route,
+                    'favorite': f.favorite,
+                    'created_date': f.created_at,
+                    'project': f.project.name,
+                    'url': f.media.url
+                })
+            return Response(list_obj)
+    
+    @property
+    def paginator(self):
+        """
+        The paginator instance associated with the view, or `None`.
+        """
+        if not hasattr(self, '_paginator'):
+            if self.pagination_class is None:
+                self._paginator = None
+            else:
+                self._paginator = self.pagination_class()
+        return self._paginator
 
-        return Response(list_obj)
+    def paginate_queryset(self, queryset):
+        if self.paginator is None:
+            return None
+        return self.paginator.paginate_queryset(queryset, self.request, view=self)
+
+    def get_paginated_response(self, data):
+        """
+        Return a paginated style `Response` object for the given output data.
+        """
+        assert self.paginator is not None
+        return self.paginator.get_paginated_response(data) 
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
@@ -196,7 +240,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
 class FileViewSet(viewsets.ModelViewSet):
     queryset = File.objects.all().order_by('id')
     serializer_class = FileSerializer
-    permission_classes = (IsAuthenticated,)  
+    permission_classes = (IsAuthenticated,)
+    # pagination_class = LimitOffsetPagination
 
     def create(self, request):
         id_download = request.data.get('download', None)
@@ -249,15 +294,17 @@ class FileViewSet(viewsets.ModelViewSet):
                 response = FileResponse(open(file_path, 'rb'))
         return response
 
-    # def get_queryset(self):
+    # With Pagination
+    # def list(self, request, project=None):
     #     queryset = File.objects.all()
-    #     id_download = self.request.query_params.get('download', None)
-    #     if id_download:
-    #         return self._download(id_download)
-    #     return queryset
-
-    # def list(self, request):
-    #     return Response({'status': 'Operation not permited'})
+    #     user = request.user.id
+    #     if user is not None:
+    #         queryset = File.objects.filter(owner=user)
+    #     page = self.paginate_queryset(queryset)
+    #     if page is not None:
+    #         serializer = self.get_serializer(page, many=True)
+    #         return self.get_paginated_response(serializer.data)
+    #     return Response({'data': None})
 
     # def update(self, request, pk=None):
     #     pass
@@ -267,19 +314,3 @@ class FileViewSet(viewsets.ModelViewSet):
 
     # def destroy(self, request, pk=None):
     #     pass
-
-# def download_file(request, pk):
-#     print(pk)
-#     if request.method == 'POST':
-#         obj = File.objects.get(id=pk)
-#         print(obj)
-#         if obj:
-#             file_path = os.path.join(settings.MEDIA_ROOT, obj.name)
-#             if os.path.exists(file_path):
-#                 with open(file_path, 'rb') as fh:
-#                     response = HttpResponse(fh.read())
-#                     response['Content-Disposition'] = 'inline; filename=' + os.path.basename(file_path)
-#                     return response
-#     else:
-#         return JsonResponse({'error': 'Error!!! method not accepted'}, status=401)
-#     raise Http404

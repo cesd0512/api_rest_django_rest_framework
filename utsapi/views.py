@@ -156,7 +156,10 @@ class FilesFromProject(APIView):
         user_id = request.user.id
         project_id = request.data.get('project', None)
         pagination = request.data.get('pagination', None)
+        search = request.data.get('search', None)
         files = File.objects.filter(owner=user_id, project=project_id)
+        if search:
+            files = self.search_file(search)
         if pagination:
             if not isinstance(pagination, int):
                 return Response({'message': 'Pagination parameter must be integer'})
@@ -183,7 +186,12 @@ class FilesFromProject(APIView):
                     'project': f.project.name,
                     'url': f.media.url
                 })
-            return Response(list_obj)
+            return Response({'results': list_obj})
+    
+    def search_file(self, word):
+        queryset = File.objects.filter(name__icontains=word)
+        return queryset
+
     
     @property
     def paginator(self):

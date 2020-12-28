@@ -21,6 +21,7 @@ from .send_email import send_email
 from django.urls import reverse_lazy
 from rest_framework.pagination import LimitOffsetPagination, PageNumberPagination
 from rest_framework.settings import api_settings
+from django.utils import timezone
 
 
 class CurrentUser(APIView):
@@ -127,12 +128,13 @@ class AuthenticateUser(APIView):
         password = request.data.get('password', None)
         user = authenticate(username=name, password=password)
         if user is not None:
+            last_login = timezone.localtime(user.last_login, timezone.get_fixed_timezone(-300))
             login(request, user)
             token, _ = Token.objects.get_or_create(user=user)
             user_res = {
                 'username': user.username,
                 'email': user.email,
-                'last_login': user.last_login,
+                'last_login': last_login,
                 'first_name': user.first_name,
                 'last_name': user.last_name,
                 'token': token.key,
@@ -157,7 +159,7 @@ class FilesFromProject(APIView):
         project_id = request.data.get('project', None)
         pagination = request.data.get('pagination', None)
         search = request.data.get('search', None)
-        files = File.objects.filter(owner=user_id, project=project_id)
+        files = File.objects.filter(owner=user_id, project=project_id).order_by('name')
         if search:
             files = self.search_file(search)
         if pagination:
@@ -231,9 +233,11 @@ class ProjectViewSet(viewsets.ModelViewSet):
         obj.save()
         return Response({
             'status': 'Project created', 
-            'object': {
-            'id': obj.id,
-            'name': obj.name
+            'project': {
+                'id': obj.id,
+                'name': obj.name,
+                'description': obj.description,
+                'updated_at': obj.updated_at
             }
         })
     
@@ -241,7 +245,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         queryset = Project.objects.all()
         user = self.request.user.id
         if user is not None:
-            queryset = Project.objects.filter(owner=user)
+            queryset = Project.objects.filter(owner=user).order_by('name')
         return queryset
 
 

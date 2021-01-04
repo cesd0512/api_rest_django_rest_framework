@@ -159,9 +159,13 @@ class FilesFromProject(APIView):
         project_id = request.data.get('project', None)
         pagination = request.data.get('pagination', None)
         search = request.data.get('search', None)
-        files = File.objects.filter(owner=user_id, project=project_id).order_by('name')
         if search:
-            files = self.search_file(search)
+            files = File.objects.filter(
+                owner=user_id, project=project_id, name__icontains=search
+                ).order_by('name')
+        else:
+            files = File.objects.filter(owner=user_id, project=project_id).order_by('name')
+
         if pagination:
             if not isinstance(pagination, int):
                 return Response({'message': 'Pagination parameter must be integer'})
@@ -190,10 +194,6 @@ class FilesFromProject(APIView):
                 })
             return Response({'results': list_obj})
     
-    def search_file(self, word):
-        queryset = File.objects.filter(name__icontains=word)
-        return queryset
-
     
     @property
     def paginator(self):
@@ -261,6 +261,8 @@ class FileViewSet(viewsets.ModelViewSet):
             return self._download(id_download)
 
         uploaded_file = request.FILES['document']
+        print('-'*100)
+        print(uploaded_file)
         # fs = FileSystemStorage()
         # name_ = fs.save(uploaded_file.name, uploaded_file)
         # route_ = fs.url(name_)
@@ -275,10 +277,16 @@ class FileViewSet(viewsets.ModelViewSet):
         return Response({
             'status': 'File created', 
             'object': {
-            'id': obj.id,
-            'name': obj.name,
-            'extension': obj.extension
-        }})
+                'id': obj.id,
+                'name': obj.name,
+                'extension': obj.extension,
+                'route': obj.route,
+                'favorite': obj.favorite,
+                'created_date': obj.created_at,
+                'project': obj.project.name,
+                'url': obj.media.url
+                }
+            })
     
     def retrieve(self, request, pk=None):
         file_, = File.objects.filter(id=pk)

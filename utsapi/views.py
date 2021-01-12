@@ -144,6 +144,30 @@ class AuthenticateUser(APIView):
             return Response({'valid': False, 'user': {}})
 
 
+class FavoriteFiles(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def put(self, request, pk=None):
+        user_id = request.user.id
+        fav = request.data.get('favorite', False)
+        file, = File.objects.filter(id=pk)
+        if file.owner.id != user_id:
+            return Response({'status': 'Operation not permited'})
+        file.favorite = fav
+        file.save()
+        return Response({
+                    'id': file.id,
+                    'name': file.name.replace('.' + file.extension, ''),
+                    'extension': file.extension,
+                    'route': file.route,
+                    'favorite': file.favorite,
+                    'created_date': file.created_at,
+                    'project': file.project.name,
+                    'url': file.media.url
+                })
+
+
+
 class FilesFromProject(APIView):
     permission_classes = (IsAuthenticated,)
     serializer_class = FileSerializer
@@ -253,13 +277,10 @@ class FileViewSet(viewsets.ModelViewSet):
     queryset = File.objects.all().order_by('id')
     serializer_class = FileSerializer
     permission_classes = (IsAuthenticated,)
-    # pagination_class = LimitOffsetPagination
+    pagination_class = PageNumberPagination
+    page_size = 8
 
     def create(self, request):
-        id_download = request.data.get('download', None)
-        if id_download:
-            return self._download(id_download)
-
         uploaded_file = request.FILES['document']
         print('-'*100)
         print(uploaded_file)
@@ -295,14 +316,20 @@ class FileViewSet(viewsets.ModelViewSet):
         user_id = self.request.user.id
         if file_.owner.id != user_id:
             return Response({'status': 'Operation not permited'})
-        return self._download(pk)
-        # return super(FileViewSet, self).retrieve(request, pk)
+        # return self._download(pk)
+        return super(FileViewSet, self).retrieve(request, pk)
 
     def get_queryset(self):
+        pagination = self.request.query_params.get('pagination', None)
+        favorite = self.request.query_params.get('favorite', None)
+        if (pagination):
+            self.pagination_class.page_size = int(pagination)
         queryset = File.objects.all()
         user = self.request.user.id
         if user is not None:
             queryset = File.objects.filter(owner=user)
+        if favorite is not None:
+            queryset = File.objects.filter(favorite=True)
         return queryset
 
     def _download(self, pk):

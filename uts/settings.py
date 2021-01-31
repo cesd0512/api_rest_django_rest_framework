@@ -68,6 +68,7 @@ INSTALLED_APPS = [
 
 CSRF_COOKIE_SECURE = True
 MEDIA_URL =  '/media/'
+PRIVATE_DIR = '/media/cesd/django/'
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 MIDDLEWARE = [

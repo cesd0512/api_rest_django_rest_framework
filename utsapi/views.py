@@ -22,7 +22,19 @@ from django.urls import reverse_lazy
 from rest_framework.pagination import LimitOffsetPagination, PageNumberPagination
 from rest_framework.settings import api_settings
 from django.utils import timezone
+from datetime import datetime
+from django.shortcuts import redirect
 
+
+def _download(pk):
+        response = Response({'status': 'error'})
+        obj, = File.objects.filter(id=int(pk))
+        if obj:
+            file_path = os.path.join(obj.media.path)
+            if os.path.exists(file_path):
+                response = FileResponse(open(file_path, 'rb'), as_attachment=True)
+        return response
+        return redirect('http://localhost:8000/media/message/2021/01/07/297124024004.pdf?var=2')
 
 class CurrentUser(APIView):
     permission_classes = (IsAuthenticated,)  
@@ -142,6 +154,20 @@ class AuthenticateUser(APIView):
             return Response({'valid': True, 'user': user_res})
         else:
             return Response({'valid': False, 'user': {}})
+
+
+class DownloadFile(APIView):
+    # permission_classes = (IsAuthenticated,)
+
+    def get(self, request, pk=None):
+        if not pk:
+            return {
+                'result': 'error', 
+                'message': 'id file is required'
+                }
+        return _download(pk)
+        # file, = File.objects.filter(id=pk)
+        # return {'result': 'ok', 'message': 'operation succesfull', 'url': file.media}
 
 
 class FavoriteFiles(APIView):
@@ -273,6 +299,46 @@ class ProjectViewSet(viewsets.ModelViewSet):
         return queryset
 
 
+class RecentProjects(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        """
+        Return recent projects consulted.
+        """
+        user = request.user
+        projects = Project.objects.filter(owner=user).exclude(consulted_date=None).values('id', 'name', 'description', 'updated_at', 'consulted_date').order_by('-consulted_date')[:5] 
+        return Response(list(projects))
+
+    def post(self, request):
+        user = request.user
+        project_id = request.data.get('project', None)
+        project, = Project.objects.filter(id=project_id)
+        project.consulted_date = datetime.now()
+        project.save()
+        return Response({'result': 'ok'})
+
+
+class RecentFiles(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        """
+        Return recent projects consulted.
+        """
+        user = request.user
+        projects = Project.objects.filter(owner=user).exclude(consulted_date=None).values('id', 'name', 'description', 'updated_at', 'consulted_date').order_by('-consulted_date')[:5] 
+        return Response(list(projects))
+
+    def post(self, request):
+        user = request.user
+        project_id = request.data.get('project', None)
+        project, = Project.objects.filter(id=project_id)
+        project.consulted_date = datetime.now()
+        project.save()
+        return Response({'result': 'ok'})
+
+
 class FileViewSet(viewsets.ModelViewSet):
     queryset = File.objects.all().order_by('id')
     serializer_class = FileSerializer
@@ -282,7 +348,6 @@ class FileViewSet(viewsets.ModelViewSet):
 
     def create(self, request):
         uploaded_file = request.FILES['document']
-        print('-'*100)
         print(uploaded_file)
         # fs = FileSystemStorage()
         # name_ = fs.save(uploaded_file.name, uploaded_file)
@@ -311,6 +376,9 @@ class FileViewSet(viewsets.ModelViewSet):
     
     def retrieve(self, request, pk=None):
         file_, = File.objects.filter(id=pk)
+
+        print(file_.media.storage.get_accessed_time(file_.media.name))
+
         if not file_:
             return Response({'message': 'File not exist'})
         user_id = self.request.user.id
@@ -332,26 +400,7 @@ class FileViewSet(viewsets.ModelViewSet):
             queryset = File.objects.filter(favorite=True)
         return queryset
 
-    def _download(self, pk):
-        response = Response({'status': 'error'})
-        obj = File.objects.get(id=pk)
-        if obj:
-            file_path = os.path.join(settings.MEDIA_ROOT, obj.name)
-            if os.path.exists(file_path):
-                response = FileResponse(open(file_path, 'rb'))
-        return response
 
-    # With Pagination
-    # def list(self, request, project=None):
-    #     queryset = File.objects.all()
-    #     user = request.user.id
-    #     if user is not None:
-    #         queryset = File.objects.filter(owner=user)
-    #     page = self.paginate_queryset(queryset)
-    #     if page is not None:
-    #         serializer = self.get_serializer(page, many=True)
-    #         return self.get_paginated_response(serializer.data)
-    #     return Response({'data': None})
 
     # def update(self, request, pk=None):
     #     pass

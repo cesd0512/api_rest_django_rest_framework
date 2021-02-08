@@ -25,7 +25,7 @@ SECRET_KEY = 'kvh@^rrmeu451ei+90kmm@d8$kap=m9m@jln3#=+86tw+uc3%d'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver', 'utscloud4files.com']
 
 # Application definition
 
@@ -126,6 +126,7 @@ REST_FRAMEWORK = {
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ORIGIN_WHITELIST = [
     "http://localhost:8080",
+    "http://utscloud4files.com/:8080"
 ]
 
 # Database

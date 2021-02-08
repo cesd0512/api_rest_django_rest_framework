@@ -42,3 +42,9 @@ class File(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class FileDownload(models.Model):
+    file = models.ForeignKey(File, on_delete=models.CASCADE)
+    download_date = models.DateTimeField(null=True)
+

@@ -2,7 +2,7 @@ from django.shortcuts import render
 from rest_framework import viewsets
 from django.core.files.storage import FileSystemStorage
 from .serializers import FileSerializer, ProjectSerializer
-from .models import File, Project
+from .models import File, Project, FileDownload
 from django.contrib.auth.models import User
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
@@ -26,15 +26,12 @@ from datetime import datetime
 from django.shortcuts import redirect
 
 
-def _download(pk):
-        response = Response({'status': 'error'})
-        obj, = File.objects.filter(id=int(pk))
-        if obj:
-            file_path = os.path.join(obj.media.path)
-            if os.path.exists(file_path):
-                response = FileResponse(open(file_path, 'rb'), as_attachment=True)
+def file_download_res(obj):
+        file_path = os.path.join(obj.media.path)
+        if os.path.exists(file_path):
+            response = FileResponse(open(file_path, 'rb'), as_attachment=True)
         return response
-        return redirect('http://localhost:8000/media/message/2021/01/07/297124024004.pdf?var=2')
+        # return redirect('http://localhost:8000/media/message/2021/01/07/297124024004.pdf?var=2')
 
 class CurrentUser(APIView):
     permission_classes = (IsAuthenticated,)  
@@ -62,11 +59,10 @@ class RecoveryPassword(APIView):
         """
         email = request.data.get('email', None)
         if email:
-            subject = "Reset password"
+            subject = "Recover password | Cloud4files"
             user_, = User.objects.filter(email=email)
-            base_url = 'http://localhost:8080/password-reset/?u=' + str(user_.id)
-            message = "Hello! \n To recover your password enter the following link: \n \n" + base_url
-            send_email(subject, message, email)
+            url_ = 'http://localhost:8080/password-reset/?u=' + str(user_.id)
+            send_email(subject, url_, email)
             return Response({'status': 'ok', 'message': 'sended mail successful!'})
 
         user_id = request.data.get('user', None)
@@ -157,17 +153,24 @@ class AuthenticateUser(APIView):
 
 
 class DownloadFile(APIView):
-    # permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated,)
 
     def get(self, request, pk=None):
         if not pk:
             return {
                 'result': 'error', 
-                'message': 'id file is required'
+                'message': 'Key file is required'
                 }
-        return _download(pk)
-        # file, = File.objects.filter(id=pk)
-        # return {'result': 'ok', 'message': 'operation succesfull', 'url': file.media}
+        response = Response({'status': 'Key not found'})
+        file_, = File.objects.filter(id=int(pk))
+        if file_:
+            now = datetime.now()
+            file_.download_date = now
+            file_.save()
+            file_download = FileDownload(file=file_, download_date=now)
+            file_download.save()
+            return file_download_res(file_)
+        return response
 
 
 class FavoriteFiles(APIView):
@@ -319,24 +322,16 @@ class RecentProjects(APIView):
         return Response({'result': 'ok'})
 
 
-class RecentFiles(APIView):
+class RecentDownloadFiles(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
         """
-        Return recent projects consulted.
+        Return recent download files.
         """
         user = request.user
-        projects = Project.objects.filter(owner=user).exclude(consulted_date=None).values('id', 'name', 'description', 'updated_at', 'consulted_date').order_by('-consulted_date')[:5] 
+        projects = File.objects.filter(owner=user).exclude(download_date=None).values('id', 'name', 'favorite', 'project', 'updated_at', 'extension',  'download_date').order_by('-download_date')[:8] 
         return Response(list(projects))
-
-    def post(self, request):
-        user = request.user
-        project_id = request.data.get('project', None)
-        project, = Project.objects.filter(id=project_id)
-        project.consulted_date = datetime.now()
-        project.save()
-        return Response({'result': 'ok'})
 
 
 class FileViewSet(viewsets.ModelViewSet):
@@ -384,7 +379,7 @@ class FileViewSet(viewsets.ModelViewSet):
         user_id = self.request.user.id
         if file_.owner.id != user_id:
             return Response({'status': 'Operation not permited'})
-        # return self._download(pk)
+        # return self.file_download_res(pk)
         return super(FileViewSet, self).retrieve(request, pk)
 
     def get_queryset(self):

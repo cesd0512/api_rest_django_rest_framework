@@ -110,7 +110,8 @@ class CreateUser(APIView):
         if not password or not name or not fname or not lname or not email:
             return Response({'status': 'error', 'message': 'Empty arguments!'})
         try:
-            user = User.objects.create_user(username=name, password=password, first_name=fname, last_name=lname, email=email)
+            user = User.objects.create_user(username=name, password=password, first_name=fname, 
+                        last_name=lname, email=email)
             user.save()
         except Exception as inst:
             return Response({'detail': inst.args})
@@ -310,7 +311,8 @@ class RecentProjects(APIView):
         Return recent projects consulted.
         """
         user = request.user
-        projects = Project.objects.filter(owner=user).exclude(consulted_date=None).values('id', 'name', 'description', 'updated_at', 'consulted_date').order_by('-consulted_date')[:5] 
+        projects = Project.objects.filter(owner=user).exclude(consulted_date=None).values(
+            'id', 'name', 'description', 'updated_at', 'consulted_date').order_by('-consulted_date')[:5] 
         return Response(list(projects))
 
     def post(self, request):
@@ -330,7 +332,9 @@ class RecentDownloadFiles(APIView):
         Return recent download files.
         """
         user = request.user
-        projects = File.objects.filter(owner=user).exclude(download_date=None).values('id', 'name', 'favorite', 'project', 'updated_at', 'extension',  'download_date').order_by('-download_date')[:8] 
+        projects = File.objects.filter(owner=user).exclude(download_date=None).values(
+            'id', 'name', 'favorite', 'project', 'updated_at', 'extension',  'download_date').order_by(
+            '-download_date')[:8] 
         return Response(list(projects))
 
 

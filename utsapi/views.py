@@ -1,37 +1,43 @@
-from django.shortcuts import render
-from rest_framework import viewsets
-from django.core.files.storage import FileSystemStorage
-from .serializers import FileSerializer, ProjectSerializer
-from .models import File, Project, FileDownload
-from django.contrib.auth.models import User
-from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
-from django.conf import settings
 import os
 import sys
+from datetime import datetime
+
+#Django
+from django.shortcuts import render
+from django.core.files.storage import FileSystemStorage
+from django.contrib.auth.models import User
+from django.shortcuts import get_object_or_404
+from django.conf import settings
 from django.http import JsonResponse
 from django.http import FileResponse
+from django.contrib.auth import authenticate, login, logout
+from django.http import HttpResponse, Http404, HttpResponseServerError
+from django.utils import timezone
+# from django.shortcuts import redirect
+# from django.urls import reverse_lazy
+
+from rest_framework import viewsets
+from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework import authentication, permissions
-from django.contrib.auth import authenticate, login, logout
 from rest_framework.authtoken.models import Token
-from django.http import HttpResponse, Http404, HttpResponseServerError
-from .send_email import send_email
-from django.urls import reverse_lazy
 from rest_framework.pagination import LimitOffsetPagination, PageNumberPagination
 from rest_framework.settings import api_settings
-from django.utils import timezone
-from datetime import datetime
-from django.shortcuts import redirect
+
+#Models and Serializers
+from .serializers import FileSerializer, ProjectSerializer
+from .models import File, Project, FileDownload, Profile
+from .send_email import send_email
 
 
 def file_download_res(obj):
-        file_path = os.path.join(obj.media.path)
-        if os.path.exists(file_path):
-            response = FileResponse(open(file_path, 'rb'), as_attachment=True)
-        return response
-        # return redirect('http://localhost:8000/media/message/2021/01/07/297124024004.pdf?var=2')
+    file_path = os.path.join(obj.media.path)
+    if os.path.exists(file_path):
+        response = FileResponse(open(file_path, 'rb'), as_attachment=True)
+    return response
+    # return redirect('http://localhost:8000/media/message/2021/01/07/297124024004.pdf?var=2')
+
 
 class CurrentUser(APIView):
     permission_classes = (IsAuthenticated,)  
@@ -113,6 +119,8 @@ class CreateUser(APIView):
             user = User.objects.create_user(username=name, password=password, first_name=fname, 
                         last_name=lname, email=email)
             user.save()
+            profile = Profile(user=user)
+            profile.save()
         except Exception as inst:
             return Response({'detail': inst.args})
         return Response({'status': 'ok', 'message': 'User created successful'})
@@ -136,6 +144,7 @@ class AuthenticateUser(APIView):
         name = request.data.get('username', None)
         password = request.data.get('password', None)
         user = authenticate(username=name, password=password)
+        profile = Profile.objects.get(user_id=user.id)
         if user is not None:
             last_login = timezone.localtime(user.last_login, timezone.get_fixed_timezone(-300))
             login(request, user)
@@ -146,7 +155,12 @@ class AuthenticateUser(APIView):
                 'last_login': last_login,
                 'first_name': user.first_name,
                 'last_name': user.last_name,
-                'token': token.key,
+                'phone': profile.phone,
+                'country': profile.country,
+                'city': profile.city,
+                'birthday': profile.birthday,
+                'alternative_email': profile.alternative_email,
+                'token': token.key
             }
             return Response({'valid': True, 'user': user_res})
         else:

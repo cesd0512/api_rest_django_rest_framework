@@ -1,6 +1,0 @@
-
-Borrar Facturas en Borrador ACUAFORTUNA desde base de datos
-
-update account_invoice_line set origin=null where invoice in (select id from account_invoice where state='draft'); 
-delete from sale_sale where id in (select sale from sale_line where id not in (select cast(substring(origin, 11) as INTEGER) from account_invoice_line where origin like 'sale.line%'));
-delete from sale_contract_line where sale is null;

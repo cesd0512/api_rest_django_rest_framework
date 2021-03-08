@@ -1,6 +1,7 @@
 from django.db import models
 from django.core.files.storage import FileSystemStorage
 from django.conf import settings
+from django.contrib.auth.models import User
 
 
 fs = FileSystemStorage(location=settings.PRIVATE_DIR)
@@ -48,3 +49,12 @@ class FileDownload(models.Model):
     file = models.ForeignKey(File, on_delete=models.CASCADE)
     download_date = models.DateTimeField(null=True)
 
+
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    profession = models.TextField(null=True, blank=True)
+    phone = models.CharField(max_length=20, null=True, blank=True)
+    country = models.TextField(null=True, blank=True)
+    city = models.TextField(null=True, blank=True)
+    birthday = models.DateField(null=True, blank=True)
+    alternative_email = models.TextField(null=True, blank=True)

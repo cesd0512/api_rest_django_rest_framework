@@ -1,3 +1,4 @@
+import os
 from django.db import models
 from django.core.files.storage import FileSystemStorage
 from django.conf import settings
@@ -50,6 +51,12 @@ class FileDownload(models.Model):
     download_date = models.DateTimeField(null=True)
 
 
+
+def get_upload_path(instance, filename):
+    return os.path.join(
+      "%s_" % instance.user.id, "user_%s" % instance.user.username, filename)
+    
+
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     profession = models.TextField(null=True, blank=True)
@@ -58,3 +65,4 @@ class Profile(models.Model):
     city = models.TextField(null=True, blank=True)
     birthday = models.DateField(null=True, blank=True)
     alternative_email = models.TextField(null=True, blank=True)
+    photo = models.FileField(upload_to=get_upload_path, null=True, blank=True)

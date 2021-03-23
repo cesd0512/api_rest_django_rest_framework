@@ -1,6 +1,7 @@
 import os
 import sys
 from datetime import datetime
+import json
 
 #Django
 from django.shortcuts import render
@@ -13,6 +14,9 @@ from django.http import FileResponse
 from django.contrib.auth import authenticate, login, logout
 from django.http import HttpResponse, Http404, HttpResponseServerError
 from django.utils import timezone
+import rest_framework.status as STATUS
+from django.forms.models import model_to_dict
+
 # from django.shortcuts import redirect
 # from django.urls import reverse_lazy
 
@@ -26,7 +30,7 @@ from rest_framework.pagination import LimitOffsetPagination, PageNumberPaginatio
 from rest_framework.settings import api_settings
 
 #Models and Serializers
-from .serializers import FileSerializer, ProjectSerializer
+from .serializers import FileSerializer, ProjectSerializer, UserEditSerializer, ProfileEditSerializer
 from .models import File, Project, FileDownload, Profile
 from .send_email import send_email
 
@@ -103,6 +107,70 @@ class ChangePassword(APIView):
             return Response({'status': 'ok', 'message': 'Password changed'})
         else:
             return Response({'status': 'error', 'message': 'Error in current password'})
+        
+
+class UpdateUser(APIView):
+    permission_classes = (IsAuthenticated,)
+    
+    def put(self, request):
+        user_object = request.data.get('user', None)
+        user_object = json.loads(user_object)
+        user = request.user
+        profile = Profile.objects.get(user_id=user.id)
+        try:
+            photo = request.FILES['photo']
+            profile.photo = photo
+            profile.save()
+        except Exception as e:
+            print('error'*200)
+            print(e)
+        # if 1:
+        try:
+            serializer_ = UserEditSerializer(user, data=user_object)
+            if serializer_.is_valid():
+                instance = serializer_.save()
+                serializer_ = ProfileEditSerializer(profile, data=user_object)
+                if serializer_.is_valid():
+                    instance_prof = serializer_.save()
+                        
+                token, _ = Token.objects.get_or_create(user=user)
+                user_dict = model_to_dict(user)
+                profile_dict = model_to_dict(profile)
+                user_dict.update(profile_dict)
+                user_dict['token'] = token.key
+                print(user_dict)
+                user_dict['photo'] = ''
+                user_dict['photo_url'] = profile.photo.url
+                return Response({'user': user_dict, 'message': 'User updated'})
+            print(serializer_.errors)
+            return Response({"error": serializer_.errors}, status=STATUS.HTTP_400_BAD_REQUEST)
+        except Exception as inst:
+            return Response({'detail': inst.args}, status=STATUS.HTTP_400_BAD_REQUEST)
+        
+
+class UpdateSecurityAccount(APIView):
+    permission_classes = (IsAuthenticated,)
+    
+    def post(self, request):
+        password = request.data.get('password', '')
+        email = request.data.get('email', '')
+        alternative_email = request.data.get('alternative_email', '')
+        user = request.user
+        
+        try:
+            if password:
+                user.set_password = password
+                user.save()
+            
+            profile = Profile.objects.get(user_id=user.id)
+            if email:
+                profile.email = email
+            if alternative_email:
+                profile.alternative_email = alternative_email
+            
+            return Response({'status': 'ok'}, status=STATUS.HTTP_200_OK)
+        except Exception as e:
+            return Response({"status": 'error', 'msg': str(e)}, status=STATUS.HTTP_400_BAD_REQUEST)
 
 
 class CreateUser(APIView):
@@ -126,7 +194,6 @@ class CreateUser(APIView):
         return Response({'status': 'ok', 'message': 'User created successful'})
 
 
-
 class LogoutUser(APIView):
     permission_classes = (IsAuthenticated,)  
 
@@ -144,8 +211,9 @@ class AuthenticateUser(APIView):
         name = request.data.get('username', None)
         password = request.data.get('password', None)
         user = authenticate(username=name, password=password)
-        profile = Profile.objects.get(user_id=user.id)
+        
         if user is not None:
+            profile = Profile.objects.get(user_id=user.id)
             last_login = timezone.localtime(user.last_login, timezone.get_fixed_timezone(-300))
             login(request, user)
             token, _ = Token.objects.get_or_create(user=user)
@@ -159,6 +227,9 @@ class AuthenticateUser(APIView):
                 'country': profile.country,
                 'city': profile.city,
                 'birthday': profile.birthday,
+                'profession': profile.profession,
+                'photo': profile.photo.url if profile.photo else '',
+                'photo_url': profile.photo.url if profile.photo else '',
                 'alternative_email': profile.alternative_email,
                 'token': token.key
             }
@@ -191,6 +262,28 @@ class DownloadFile(APIView):
 class FavoriteFiles(APIView):
     permission_classes = (IsAuthenticated,)
 
+    def get(self, request):
+        user_id = request.user.id
+        fav = request.data.get('favorite', False)
+        files = File.objects.filter(favorite=True, owner_id=user_id)
+        data = []
+        for file in files:
+            data.append({
+                'id': file.id,
+                'name': file.name,
+                'extension': file.extension,
+                'project': file.project.name,
+                'created_at': file.created_at,
+                'updated_at': file.updated_at,
+                'media': file.media.url
+            })
+        
+        return Response(data, status=STATUS.HTTP_200_OK)
+
+
+class UpdateFavoriteFiles(APIView):
+    permission_classes = (IsAuthenticated,)
+
     def put(self, request, pk=None):
         user_id = request.user.id
         fav = request.data.get('favorite', False)
@@ -209,7 +302,6 @@ class FavoriteFiles(APIView):
                     'project': file.project.name,
                     'url': file.media.url
                 })
-
 
 
 class FilesFromProject(APIView):
@@ -261,7 +353,6 @@ class FilesFromProject(APIView):
                     'url': f.media.url
                 })
             return Response({'results': list_obj})
-    
     
     @property
     def paginator(self):
@@ -361,7 +452,6 @@ class FileViewSet(viewsets.ModelViewSet):
 
     def create(self, request):
         uploaded_file = request.FILES['document']
-        print(uploaded_file)
         # fs = FileSystemStorage()
         # name_ = fs.save(uploaded_file.name, uploaded_file)
         # route_ = fs.url(name_)
@@ -412,8 +502,6 @@ class FileViewSet(viewsets.ModelViewSet):
         if favorite is not None:
             queryset = File.objects.filter(favorite=True)
         return queryset
-
-
 
     # def update(self, request, pk=None):
     #     pass

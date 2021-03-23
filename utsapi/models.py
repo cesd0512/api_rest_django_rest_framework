@@ -54,7 +54,7 @@ class FileDownload(models.Model):
 
 def get_upload_path(instance, filename):
     return os.path.join(
-      "%s_" % instance.user.id, "user_%s" % instance.user.username, filename)
+      "profile/%s" % instance.user.id, "%s" % instance.user.username, filename)
     
 
 class Profile(models.Model):
@@ -66,3 +66,7 @@ class Profile(models.Model):
     birthday = models.DateField(null=True, blank=True)
     alternative_email = models.TextField(null=True, blank=True)
     photo = models.FileField(upload_to=get_upload_path, null=True, blank=True)
+    
+    # @property
+    # def photo_url(self):
+    #     return '%s%s' % (settings.MEDIA_URL, self.photo)

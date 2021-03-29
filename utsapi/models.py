@@ -48,8 +48,7 @@ class File(models.Model):
 
 class FileDownload(models.Model):
     file = models.ForeignKey(File, on_delete=models.CASCADE)
-    download_date = models.DateTimeField(null=True)
-
+    download_date = models.DateTimeField(null=False, auto_now_add=True)
 
 
 def get_upload_path(instance, filename):

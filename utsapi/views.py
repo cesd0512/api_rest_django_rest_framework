@@ -1,7 +1,8 @@
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, date
 import json
+import calendar
 
 #Django
 from django.shortcuts import render
@@ -257,6 +258,46 @@ class DownloadFile(APIView):
             file_download.save()
             return file_download_res(file_)
         return response
+    
+
+class IndicatorsView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        user_id = request.user.id
+        # months = request.data.get('months', [])
+        
+        files = File.objects.filter(owner_id=user_id).count()
+        downloads = FileDownload.objects.filter(file__owner_id=user_id).count()
+        projects = Project.objects.filter(owner_id=user_id).count()
+        data = {
+            'files': files,
+            'downloads': downloads,
+            'projects': projects
+        }
+        months_dict = {}
+        current_month = date.today().month
+        _month = current_month
+        for i in range(6):
+            print(_month)
+            _year = date.today().year
+            if _month == 0:
+                _month = 12
+            if _month > current_month:
+                _year -= 1 
+            _last_day_month = calendar.monthrange(_year, _month)
+            first_date = date(_year, _month, 1)
+            last_date = date(_year, _month, _last_day_month[1])
+            qty_down = FileDownload.objects.filter(
+                file__owner_id=user_id,
+                download_date__gte=first_date,
+                download_date__lte=last_date
+                ).count()
+            months_dict[_month] = qty_down
+            data['months'] = months_dict
+            _month -= 1
+        print(data)
+        return Response(data, status=STATUS.HTTP_200_OK)
 
 
 class FavoriteFiles(APIView):

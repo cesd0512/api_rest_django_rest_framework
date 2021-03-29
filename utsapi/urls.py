@@ -30,5 +30,6 @@ urlpatterns = [
     path('files/favorites/<int:pk>/', views.UpdateFavoriteFiles.as_view()),
     path('files_favorites/', views.FavoriteFiles.as_view()),
     path('download-file/<int:pk>/', views.DownloadFile.as_view()),
+    path('indicators/', views.IndicatorsView.as_view()),
     # path('download/<int:pk>/', views.download_file, name='download_file'),
 ]

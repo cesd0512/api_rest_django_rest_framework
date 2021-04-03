@@ -260,26 +260,20 @@ class DownloadFile(APIView):
         return response
     
 
-class IndicatorsView(APIView):
+class MonthsIndicatorsView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
         user_id = request.user.id
         # months = request.data.get('months', [])
-        
-        files = File.objects.filter(owner_id=user_id).count()
-        downloads = FileDownload.objects.filter(file__owner_id=user_id).count()
-        projects = Project.objects.filter(owner_id=user_id).count()
-        data = {
-            'files': files,
-            'downloads': downloads,
-            'projects': projects
-        }
         months_dict = {}
         current_month = date.today().month
         _month = current_month
+        months = ["", "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+        ]
+        
         for i in range(6):
-            print(_month)
             _year = date.today().year
             if _month == 0:
                 _month = 12
@@ -293,9 +287,25 @@ class IndicatorsView(APIView):
                 download_date__gte=first_date,
                 download_date__lte=last_date
                 ).count()
-            months_dict[_month] = qty_down
-            data['months'] = months_dict
+            months_dict[months[_month]] = qty_down
             _month -= 1
+            
+        return Response(months_dict, status=STATUS.HTTP_200_OK)
+
+
+class TotalsIndicatorsView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        user_id = request.user.id
+        files = File.objects.filter(owner_id=user_id).count()
+        downloads = FileDownload.objects.filter(file__owner_id=user_id).count()
+        projects = Project.objects.filter(owner_id=user_id).count()
+        data = {
+            'files': files,
+            'downloads': downloads,
+            'projects': projects,
+        }
         print(data)
         return Response(data, status=STATUS.HTTP_200_OK)
 

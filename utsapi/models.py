@@ -32,7 +32,7 @@ class File(models.Model):
     name = models.CharField(max_length=100, null=True)
     extension = models.CharField(max_length=10, null=True)
     route = models.CharField(max_length=150, null=True)
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, null=False)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, null=True)
     favorite = models.BooleanField(default=False)
     owner = models.ForeignKey('auth.User', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -48,7 +48,7 @@ class File(models.Model):
 
 class FileDownload(models.Model):
     file = models.ForeignKey(File, on_delete=models.CASCADE)
-    download_date = models.DateTimeField(null=False, auto_now_add=True)
+    download_date = models.DateTimeField(null=False)
 
 
 def get_upload_path(instance, filename):

@@ -434,6 +434,13 @@ class ProjectViewSet(viewsets.ModelViewSet):
     queryset = Project.objects.all().order_by('id')
     serializer_class = ProjectSerializer
     permission_classes = (IsAuthenticated,)  
+    
+    def get_queryset(self):
+        queryset = Project.objects.all()
+        user = self.request.user.id
+        if user is not None:
+            queryset = Project.objects.filter(owner=user).order_by('name')
+        return queryset
 
     def create(self, request):
         user = request.user
@@ -450,13 +457,16 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 'updated_at': obj.updated_at
             }
         })
-    
-    def get_queryset(self):
-        queryset = Project.objects.all()
-        user = self.request.user.id
-        if user is not None:
-            queryset = Project.objects.filter(owner=user).order_by('name')
-        return queryset
+        
+    def update(self, request, pk=None):
+        project = Project.objects.get(pk=pk)
+        if not project:
+            return Response({'message': 'Project not found'})
+        user_id = self.request.user.id
+        if project.owner.id != user_id:
+            return Response({'status': 'Operation not permited'})
+        super(ProjectViewSet, self).retrieve(request, pk)
+        return Project.objects.filter(owner_id=user_id).values()
 
 
 class RecentProjects(APIView):
@@ -500,6 +510,19 @@ class FileViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated,)
     pagination_class = PageNumberPagination
     page_size = 8
+    
+    def get_queryset(self):
+        pagination = self.request.query_params.get('pagination', None)
+        favorite = self.request.query_params.get('favorite', None)
+        if (pagination):
+            self.pagination_class.page_size = int(pagination)
+        queryset = File.objects.all()
+        user = self.request.user.id
+        if user is not None:
+            queryset = File.objects.filter(owner=user)
+        if favorite is not None:
+            queryset = File.objects.filter(favorite=True)
+        return queryset
 
     def create(self, request):
         uploaded_file = request.FILES['document']
@@ -540,19 +563,6 @@ class FileViewSet(viewsets.ModelViewSet):
             return Response({'status': 'Operation not permited'})
         # return self.file_download_res(pk)
         return super(FileViewSet, self).retrieve(request, pk)
-
-    def get_queryset(self):
-        pagination = self.request.query_params.get('pagination', None)
-        favorite = self.request.query_params.get('favorite', None)
-        if (pagination):
-            self.pagination_class.page_size = int(pagination)
-        queryset = File.objects.all()
-        user = self.request.user.id
-        if user is not None:
-            queryset = File.objects.filter(owner=user)
-        if favorite is not None:
-            queryset = File.objects.filter(favorite=True)
-        return queryset
 
     # def update(self, request, pk=None):
     #     pass

@@ -462,11 +462,11 @@ class ProjectViewSet(viewsets.ModelViewSet):
         project = Project.objects.get(pk=pk)
         if not project:
             return Response({'message': 'Project not found'})
-        user_id = self.request.user.id
+        user_id = request.user.id
         if project.owner.id != user_id:
             return Response({'status': 'Operation not permited'})
-        super(ProjectViewSet, self).retrieve(request, pk)
-        return Project.objects.filter(owner_id=user_id).values()
+        super(ProjectViewSet, self).update(request, pk)
+        return Response(Project.objects.filter(owner_id=user_id).values())
 
 
 class RecentProjects(APIView):

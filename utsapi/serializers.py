@@ -4,22 +4,29 @@ from django.conf import settings
 from .models import File, Project, Profile
 from django.contrib.auth.models import User
 
-class FileSerializer(serializers.HyperlinkedModelSerializer):
-    # media_url = serializers.SerializerMethodField('get_thumbnail_url')
-
-    def get_thumbnail_url(self, obj):
-        return '%s%s' % (settings.MEDIA_URL, obj.media)
-
-    class Meta:
-        model = File
-        fields = ('id', 'name', 'extension', 'route', 'project', 'favorite', 'updated_at', 'download_date')
-
 
 class ProjectSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Project
         fields = ('id', 'name', 'description', 'updated_at')
-        
+
+
+class FileSerializer(serializers.HyperlinkedModelSerializer):
+    project = ProjectSerializer()
+    # last_download = serializers.SerializerMethodField('get_last_download')
+    # media_url = serializers.SerializerMethodField('get_thumbnail_url')
+
+    def get_thumbnail_url(self, obj):
+        return '%s%s' % (settings.MEDIA_URL, obj.media)
+    
+    # def get_last_download(self):
+    #     download = FileDownload.objects.filter(file=)
+
+    class Meta:
+        model = File
+        fields = ('id', 'name', 'extension', 'route', 'project',
+                  'favorite', 'updated_at', 'created_at', 'download_date')
+
 
 class ProfileEditSerializer(serializers.HyperlinkedModelSerializer):
     # photo_url = serializers.SerializerMethodField('get_thumbnail_url')

@@ -41,7 +41,6 @@ class File(models.Model):
     media = models.FileField(upload_to='files/%Y/%m/%d/', null=True, blank=True)
     # media = models.FileField(upload_to=my_awesome_upload_function, null=True, blank=True)
 
-
     def __str__(self):
         return self.name
 

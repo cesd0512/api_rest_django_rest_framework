@@ -36,6 +36,10 @@ from .models import File, Project, FileDownload, Profile
 from .send_email import send_email
 
 
+from rest_framework.request import Request
+from rest_framework.test import APIRequestFactory
+
+
 def file_download_res(obj):
     file_path = os.path.join(obj.media.path)
     if os.path.exists(file_path):
@@ -361,8 +365,6 @@ class FilesFromProject(APIView):
     pagination_class = PageNumberPagination
 
     def post(self, request, format=None):
-        from rest_framework.request import Request
-        from rest_framework.test import APIRequestFactory
         """
         Return file list of project.
         """
@@ -512,16 +514,19 @@ class FileViewSet(viewsets.ModelViewSet):
     page_size = 8
     
     def get_queryset(self):
+        user_id = self.request.user.id
         pagination = self.request.query_params.get('pagination', None)
-        favorite = self.request.query_params.get('favorite', None)
+        search = self.request.query_params.get('search', None)
         if (pagination):
             self.pagination_class.page_size = int(pagination)
-        queryset = File.objects.all()
-        user = self.request.user.id
-        if user is not None:
-            queryset = File.objects.filter(owner=user)
-        if favorite is not None:
-            queryset = File.objects.filter(favorite=True)
+        
+        if search:
+            queryset = File.objects.filter(
+                owner=user_id, name__icontains=search
+                ).order_by('name')
+        else:
+            queryset = File.objects.filter(owner=user_id).order_by('name')
+            
         return queryset
 
     def create(self, request):
@@ -533,7 +538,9 @@ class FileViewSet(viewsets.ModelViewSet):
         ext_ = name_.split('.')
         ext_ = ext_[-1] if ext_ else None
         project_id = request.data.get('project', None)
-        project = Project.objects.get(id=project_id)
+        project = None
+        if project_id:
+            project = Project.objects.get(id=project_id)
         user = request.user
         obj = File(name=name_, extension=ext_, project=project, owner=user, media=uploaded_file)
         obj.save()
@@ -546,7 +553,7 @@ class FileViewSet(viewsets.ModelViewSet):
                 'route': obj.route,
                 'favorite': obj.favorite,
                 'created_date': obj.created_at,
-                'project': obj.project.name,
+                'project': obj.project.name if obj.project else '',
                 'url': obj.media.url
                 }
             })

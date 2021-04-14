@@ -137,17 +137,18 @@ class UpdateUser(APIView):
                 serializer_ = ProfileEditSerializer(profile, data=user_object)
                 if serializer_.is_valid():
                     instance_prof = serializer_.save()
-                        
+                else:
+                    print('Error guardar profile', serializer_.errors)        
                 token, _ = Token.objects.get_or_create(user=user)
                 user_dict = model_to_dict(user)
                 profile_dict = model_to_dict(profile)
                 user_dict.update(profile_dict)
                 user_dict['token'] = token.key
-                print(user_dict)
                 user_dict['photo'] = ''
                 user_dict['photo_url'] = profile.photo.url
                 return Response({'user': user_dict, 'message': 'User updated'})
-            print(serializer_.errors)
+            else:
+                print('Error guardar user', serializer_.errors)
             return Response({"error": serializer_.errors}, status=STATUS.HTTP_400_BAD_REQUEST)
         except Exception as inst:
             return Response({'detail': inst.args}, status=STATUS.HTTP_400_BAD_REQUEST)
@@ -164,14 +165,15 @@ class UpdateSecurityAccount(APIView):
         
         try:
             if password:
-                user.set_password = password
-                user.save()
+                user.set_password(password)
+            if email:
+                user.email = email
+            user.save()
             
             profile = Profile.objects.get(user_id=user.id)
-            if email:
-                profile.email = email
             if alternative_email:
                 profile.alternative_email = alternative_email
+            profile.save()
             
             return Response({'status': 'ok'}, status=STATUS.HTTP_200_OK)
         except Exception as e:

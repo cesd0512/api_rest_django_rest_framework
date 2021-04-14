@@ -37,6 +37,10 @@ class ProfileEditSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Profile
         fields = "__all__"
+        extra_kwargs = {
+            'id': {'read_only': True},
+            'user': {'read_only': True},
+        }
         
         
 class UserEditSerializer(serializers.HyperlinkedModelSerializer):

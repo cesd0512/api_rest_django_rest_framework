@@ -12,15 +12,11 @@ EMAIL_ADDRESS = os.getenv('EMAIL_ADDRESS')
 
 path = os.getcwd() +'/utsapi/'
 
-def send_email(subject, url, to):
+def send_email(subject, url, to, username):
     with open(path +'template_email.html', 'r') as file:
         template = file.read().replace('linkopen', url)
-    print('*'*100)
-    print(subject)
-    print(template)
-    print(to)
-    print(SENDGRID_API_KEY)
-    print('*'*100)
+    template = template.replace('username', username)
+    
     message = Mail(
         from_email = EMAIL_ADDRESS,
         to_emails = to,

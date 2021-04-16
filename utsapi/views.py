@@ -40,6 +40,9 @@ from rest_framework.request import Request
 from rest_framework.test import APIRequestFactory
 
 
+URL_SERVER = os.getenv('BASE_URL_SERVER')
+                             
+
 def file_download_res(obj):
     file_path = os.path.join(obj.media.path)
     if os.path.exists(file_path):
@@ -76,9 +79,11 @@ class RecoveryPassword(APIView):
         if email:
             subject = "Recover password | Cloud4files"
             user_, = User.objects.filter(email=email)
-            url_ = 'http://localhost:8080/password-reset/?u=' + str(user_.id)
-            send_email(subject, url_, email)
-            return Response({'status': 'ok', 'message': 'sended mail successful!'})
+            if not user_:
+                return Response({'status': 'error', 'message': 'Account not found'}, status=STATUS.HTTP_400_BAD_REQUEST)
+            url_ = URL_SERVER + 'password-reset/?u=' + str(user_.id)
+            send_email(subject, url_, email, user_.username)
+            return Response({'status': 'ok', 'message': 'sended mail successful!'}, status=STATUS.HTTP_200_OK)
 
         user_id = request.data.get('user', None)
         n_pass = request.data.get('password', None)
@@ -88,9 +93,9 @@ class RecoveryPassword(APIView):
         if user is not None:
             user.set_password(n_pass)
             user.save()
-            return Response({'status': 'ok', 'message': 'Password changed'})
+            return Response({'status': 'ok', 'message': 'Password changed'}, status=STATUS.HTTP_200_OK)
         else:
-            return Response({'status': 'error', 'message': 'Error user not found'})
+            return Response({'status': 'error', 'message': 'Error user not found'}, status=STATUS.HTTP_400_BAD_REQUEST)
 
 
 class ChangePassword(APIView):
@@ -145,12 +150,13 @@ class UpdateUser(APIView):
                 user_dict.update(profile_dict)
                 user_dict['token'] = token.key
                 user_dict['photo'] = ''
-                user_dict['photo_url'] = profile.photo.url
+                user_dict['photo_url'] = profile.photo.url if profile.photo else ''
                 return Response({'user': user_dict, 'message': 'User updated'})
             else:
                 print('Error guardar user', serializer_.errors)
             return Response({"error": serializer_.errors}, status=STATUS.HTTP_400_BAD_REQUEST)
         except Exception as inst:
+            print(inst.args)
             return Response({'detail': inst.args}, status=STATUS.HTTP_400_BAD_REQUEST)
         
 

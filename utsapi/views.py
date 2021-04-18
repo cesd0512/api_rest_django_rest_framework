@@ -13,6 +13,7 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.http import FileResponse
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.http import HttpResponse, Http404, HttpResponseServerError
 from django.utils import timezone
 import rest_framework.status as STATUS
@@ -76,6 +77,7 @@ class RecoveryPassword(APIView):
         Return state of change password.
         """
         email = request.data.get('email', None)
+        token_generator = PasswordResetTokenGenerator()
         if email:
             subject = "Recover password | Cloud4files"  
             try:
@@ -84,16 +86,19 @@ class RecoveryPassword(APIView):
                 print('Error : ', str(e))
                 return Response({'status': 'error', 'message': 'Account not found'}, status=STATUS.HTTP_200_OK)
             else:
-                url_ = URL_SERVER + 'password-reset/?u=' + str(user_.id)
+                token = token_generator.make_token(user_)
+                print('token: ', token)
+                url_ = URL_SERVER + 'password-reset/?u=' + str(user_.id) + '&t' + str(token)
                 send_email(subject, url_, email, user_.username)
                 return Response({'status': 'ok', 'message': 'sended mail successful!'}, status=STATUS.HTTP_200_OK)
 
         user_id = request.data.get('user', None)
+        token = request.data.get('token', None)
         n_pass = request.data.get('password', None)
         if not n_pass:
             return Response({'status': 'error', 'message': 'Empty arguments!'})
         user, = User.objects.filter(id=int(user_id))
-        if user is not None:
+        if user and token_generator.check_token(user, token):
             user.set_password(n_pass)
             user.save()
             return Response({'status': 'ok', 'message': 'Password changed'}, status=STATUS.HTTP_200_OK)

@@ -111,6 +111,8 @@ CORS_ALLOW_METHODS = [
     'PUT',
 ]
 
+PASSWORD_RESET_TIMEOUT_DAYS = 1
+
 REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': (
         'django_filters.rest_framework.DjangoFilterBackend',

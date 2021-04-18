@@ -77,13 +77,16 @@ class RecoveryPassword(APIView):
         """
         email = request.data.get('email', None)
         if email:
-            subject = "Recover password | Cloud4files"
-            user_, = User.objects.filter(email=email)
-            if not user_:
-                return Response({'status': 'error', 'message': 'Account not found'}, status=STATUS.HTTP_400_BAD_REQUEST)
-            url_ = URL_SERVER + 'password-reset/?u=' + str(user_.id)
-            send_email(subject, url_, email, user_.username)
-            return Response({'status': 'ok', 'message': 'sended mail successful!'}, status=STATUS.HTTP_200_OK)
+            subject = "Recover password | Cloud4files"  
+            try:
+                user_ = User.objects.get(email=email)
+            except Exception as e:
+                print('Error : ', str(e))
+                return Response({'status': 'error', 'message': 'Account not found'}, status=STATUS.HTTP_200_OK)
+            else:
+                url_ = URL_SERVER + 'password-reset/?u=' + str(user_.id)
+                send_email(subject, url_, email, user_.username)
+                return Response({'status': 'ok', 'message': 'sended mail successful!'}, status=STATUS.HTTP_200_OK)
 
         user_id = request.data.get('user', None)
         n_pass = request.data.get('password', None)
@@ -132,18 +135,20 @@ class UpdateUser(APIView):
             profile.photo = photo
             profile.save()
         except Exception as e:
-            print('error'*200)
+            print('error'*50)
             print(e)
         # if 1:
         try:
             serializer_ = UserEditSerializer(user, data=user_object)
+            errors = '';
             if serializer_.is_valid():
                 instance = serializer_.save()
                 serializer_ = ProfileEditSerializer(profile, data=user_object)
                 if serializer_.is_valid():
                     instance_prof = serializer_.save()
                 else:
-                    print('Error guardar profile', serializer_.errors)        
+                    print('Error guardar profile', serializer_.errors)    
+                    errors = serializer_.errors    
                 token, _ = Token.objects.get_or_create(user=user)
                 user_dict = model_to_dict(user)
                 profile_dict = model_to_dict(profile)
@@ -154,7 +159,11 @@ class UpdateUser(APIView):
                 return Response({'user': user_dict, 'message': 'User updated'})
             else:
                 print('Error guardar user', serializer_.errors)
-            return Response({"error": serializer_.errors}, status=STATUS.HTTP_400_BAD_REQUEST)
+                errors = serializer_.errors
+                
+            if errors:
+                return Response({"error": errors}, status=STATUS.HTTP_400_BAD_REQUEST)
+            
         except Exception as inst:
             print(inst.args)
             return Response({'detail': inst.args}, status=STATUS.HTTP_400_BAD_REQUEST)
@@ -244,6 +253,7 @@ class AuthenticateUser(APIView):
                 'photo': profile.photo.url if profile.photo else '',
                 'photo_url': profile.photo.url if profile.photo else '',
                 'alternative_email': profile.alternative_email,
+                'language': profile.language if profile.language else '',
                 'token': token.key
             }
             return Response({'valid': True, 'user': user_res})

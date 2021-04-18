@@ -64,6 +64,7 @@ class Profile(models.Model):
     birthday = models.DateField(null=True, blank=True)
     alternative_email = models.TextField(null=True, blank=True)
     photo = models.FileField(upload_to=get_upload_path, null=True, blank=True)
+    language = models.TextField(null=True, blank=True, default='es')
     
     # @property
     # def photo_url(self):

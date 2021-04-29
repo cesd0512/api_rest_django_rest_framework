@@ -25,7 +25,8 @@ SECRET_KEY = 'kvh@^rrmeu451ei+90kmm@d8$kap=m9m@jln3#=+86tw+uc3%d'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver', 'utscloud4files.com']
+# ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver', 'utscloud4files.com']
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
@@ -139,12 +140,18 @@ DATABASES = {
     'default': {
         # 'ENGINE': 'django.db.backends.sqlite3',
         # 'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'FILES',
-        'USER': 'camilo',
-        'PASSWORD': '123',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        # 'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        # 'NAME': 'FILES',
+        # 'USER': 'camilo',
+        # 'PASSWORD': '123',
+        # 'HOST': 'postgres',
+        # 'PORT': '5432',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('POSTGRES_NAME'),
+        'USER': os.environ.get('POSTGRES_USER'),
+        'PASSWORD': os.environ.get('POSTGRES_PASSWORD'),
+        'HOST': os.environ.get('POSTGRES_HOST'),
+        'PORT': os.environ.get('POSTGRES_PORT'),
     }
 }
 
@@ -186,3 +193,5 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 
 STATIC_URL = '/static/'
+
+STATIC_ROOT = os.path.join(BASE_DIR, 'static/')

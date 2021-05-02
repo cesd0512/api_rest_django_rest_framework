@@ -377,7 +377,7 @@ class UpdateFavoriteFiles(APIView):
                     'route': file.route,
                     'favorite': file.favorite,
                     'created_date': file.created_at,
-                    'project': file.project.name,
+                    'project': file.project.name if file.project else '',
                     'url': file.media.url
                 })
 
@@ -523,10 +523,10 @@ class RecentDownloadFiles(APIView):
         Return recent download files.
         """
         user = request.user
-        projects = File.objects.filter(owner=user).exclude(download_date=None).values(
+        files = File.objects.filter(owner=user).exclude(download_date=None).values(
             'id', 'name', 'favorite', 'project', 'updated_at', 'extension',  'download_date').order_by(
             '-download_date')[:8] 
-        return Response(list(projects))
+        return Response(list(files))
 
 
 class FileViewSet(viewsets.ModelViewSet):

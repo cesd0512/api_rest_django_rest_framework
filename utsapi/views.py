@@ -350,7 +350,7 @@ class FavoriteFiles(APIView):
                 'id': file.id,
                 'name': file.name,
                 'extension': file.extension,
-                'project': file.project.name,
+                'project': file.project.name if file.project else '',
                 'created_at': file.created_at,
                 'updated_at': file.updated_at,
                 'media': file.media.url

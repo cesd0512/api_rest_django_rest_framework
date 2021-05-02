@@ -81,10 +81,12 @@ class RecoveryPassword(APIView):
         if email:
             subject = "Recover password | Cloud4files"  
             try:
-                user_, = User.objects.filter(email=email)
+                user_ = User.objects.filter(email=email)
                 if not user_:
                     profile, = Profile.objects.filter(alternative_email=email)
                     user_ = profile.user
+                else:
+                    user_ = user_[0]
                 token = token_generator.make_token(user_)
                 url_ = URL_SERVER + 'password-reset/?u=' + str(user_.id) + '&t' + str(token)
                 send_email(subject, url_, email, user_.username)

@@ -23,7 +23,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = 'kvh@^rrmeu451ei+90kmm@d8$kap=m9m@jln3#=+86tw+uc3%d'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG')
 
 # ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver', 'utscloud4files.com']
 ALLOWED_HOSTS = ['*']

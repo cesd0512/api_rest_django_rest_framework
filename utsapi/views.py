@@ -6,7 +6,6 @@ import calendar
 
 #Django
 from django.shortcuts import render
-from django.core.files.storage import FileSystemStorage
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
 from django.conf import settings
@@ -18,9 +17,6 @@ from django.http import HttpResponse, Http404, HttpResponseServerError
 from django.utils import timezone
 import rest_framework.status as STATUS
 from django.forms.models import model_to_dict
-
-# from django.shortcuts import redirect
-# from django.urls import reverse_lazy
 
 from rest_framework import viewsets
 from rest_framework.response import Response
@@ -41,7 +37,7 @@ from rest_framework.request import Request
 from rest_framework.test import APIRequestFactory
 
 
-URL_SERVER = os.getenv('BASE_URL_SERVER')
+URL_FRONTEND = os.getenv('URL_FRONTEND')
                              
 
 def file_download_res(obj):
@@ -49,7 +45,6 @@ def file_download_res(obj):
     if os.path.exists(file_path):
         response = FileResponse(open(file_path, 'rb'), as_attachment=True)
     return response
-    # return redirect('http://localhost:8000/media/message/2021/01/07/297124024004.pdf?var=2')
 
 
 class CurrentUser(APIView):
@@ -88,7 +83,7 @@ class RecoveryPassword(APIView):
                 else:
                     user_ = user_[0]
                 token = token_generator.make_token(user_)
-                url_ = URL_SERVER + 'password-reset/?u=' + str(user_.id) + '&t' + str(token)
+                url_ = URL_FRONTEND + 'password-reset/?u=' + str(user_.id) + '&t' + str(token)
                 send_email(subject, url_, email, user_.username)
                 return Response({'status': 'ok', 'message': 'sended mail successful!'}, status=STATUS.HTTP_200_OK)
             
@@ -145,9 +140,9 @@ class UpdateUser(APIView):
             profile.photo = photo
             profile.save()
         except Exception as e:
-            print('error'*50)
+            print('error'*10)
             print(e)
-        # if 1:
+            
         try:
             serializer_ = UserEditSerializer(user, data=user_object)
             errors = '';
@@ -297,7 +292,6 @@ class MonthsIndicatorsView(APIView):
 
     def get(self, request):
         user_id = request.user.id
-        # months = request.data.get('months', [])
         months_dict = {}
         current_month = date.today().month
         _month = current_month
@@ -338,7 +332,6 @@ class TotalsIndicatorsView(APIView):
             'downloads': downloads,
             'projects': projects,
         }
-        print(data)
         return Response(data, status=STATUS.HTTP_200_OK)
 
 
@@ -559,9 +552,6 @@ class FileViewSet(viewsets.ModelViewSet):
 
     def create(self, request):
         uploaded_file = request.FILES['document']
-        # fs = FileSystemStorage()
-        # name_ = fs.save(uploaded_file.name, uploaded_file)
-        # route_ = fs.url(name_)
         name_ = uploaded_file.name
         ext_ = name_.split('.')
         ext_ = ext_[-1] if ext_ else None
@@ -588,15 +578,11 @@ class FileViewSet(viewsets.ModelViewSet):
     
     def retrieve(self, request, pk=None):
         file_, = File.objects.filter(id=pk)
-
-        print(file_.media.storage.get_accessed_time(file_.media.name))
-
         if not file_:
             return Response({'message': 'File not exist'})
         user_id = self.request.user.id
         if file_.owner.id != user_id:
             return Response({'status': 'Operation not permited'})
-        # return self.file_download_res(pk)
         return super(FileViewSet, self).retrieve(request, pk)
 
     # def update(self, request, pk=None):
